@@ -1,0 +1,736 @@
+<title>Game Idea Prompt Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@600;700&family=Mitr:wght@400;500;600&display=swap">
+<style>
+/* Layout: stepper (กรอก → การ์ด → Prompt), form panels color-coded like board-game cards; card is a fixed A4 landscape object scaled to fit */
+:root{
+  --bg:#EDF1F7; --surface:#FFFFFF; --surface-2:#F6F8FC; --ink:#1C2240; --muted:#5B6382; --line:#D5DCE8;
+  --accent:#FF6A3D; --accent-ink:#FFFFFF; --sun:#FFC53D; --teal:#14A38B; --violet:#6E56CF; --sky:#2F80ED; --pink:#E0508F; --green:#2E9E5B; --navy:#1C2240;
+  --focus:#2F80ED;
+  --f-display:"Mitr","Anuphan",system-ui,sans-serif;
+  --f-body:"Anuphan","Sarabun",system-ui,sans-serif;
+  --f-tag:"Chakra Petch","Mitr",system-ui,sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11142A; --surface:#1A1E38; --surface-2:#22274A; --ink:#E9ECF8; --muted:#A0A7C7; --line:#323A63;
+  --accent:#FF7D55; --accent-ink:#1A0E08; --focus:#7FB0FF; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#11142A; --surface:#1A1E38; --surface-2:#22274A; --ink:#E9ECF8; --muted:#A0A7C7; --line:#323A63;
+  --accent:#FF7D55; --accent-ink:#1A0E08; --focus:#7FB0FF; color-scheme:dark }
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:20px 80px}
+h1,h2,h3{font-family:var(--f-display);font-weight:500;text-wrap:balance;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+/* top */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px}
+.brand .tag{font-family:var(--f-tag);font-weight:700;letter-spacing:.12em;font-size:12px;color:var(--accent)}
+.brand h1{font-size:clamp(26px,4vw,36px);line-height:1.15}
+.brand p{margin:4px 0 0;color:var(--muted);max-width:62ch}
+.steps{display:flex;gap:6px;flex-wrap:wrap}
+.step{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px 6px 6px;cursor:pointer;font-family:var(--f-display);font-size:14px}
+.step b{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--surface-2);font-family:var(--f-tag);font-size:13px}
+.step[aria-current="step"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.step[aria-current="step"] b{background:var(--sun);color:#1C2240}
+
+.banner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--surface);border:1.5px dashed var(--sun);border-radius:var(--r);padding:10px 14px;margin-bottom:16px;font-size:14px}
+.banner strong{font-family:var(--f-display);font-weight:500}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:9px 16px;cursor:pointer;font-family:var(--f-display);font-size:15px;line-height:1.2;transition:transform .12s, background .12s}
+.btn:hover{transform:translateY(-1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn.small{padding:6px 12px;font-size:13px;border-radius:10px}
+.btn svg{width:18px;height:18px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.bar.end{justify-content:flex-end}
+
+/* section nav */
+.secnav{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:14px;scrollbar-width:thin}
+.secnav a{flex:none;text-decoration:none;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:999px;padding:4px 12px 4px 4px;font-size:13px;display:flex;gap:6px;align-items:center}
+.secnav a i{font-style:normal;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--c);color:#fff;font-family:var(--f-tag);font-size:12px}
+.secnav a.done{border-color:var(--c)}
+
+/* form panels */
+.panels{display:grid;gap:16px}
+.panel{background:var(--surface);border-radius:var(--r);border:1.5px solid var(--line);overflow:hidden;scroll-margin-top:16px}
+.panel-h{display:flex;gap:14px;align-items:center;padding:14px 18px;border-bottom:1.5px solid var(--line);background:linear-gradient(90deg,color-mix(in srgb,var(--c) 14%,transparent),transparent 70%)}
+.num{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--c);color:#fff;font-family:var(--f-tag);font-weight:700;font-size:18px;transform:rotate(-4deg)}
+.panel-h .en{font-family:var(--f-tag);font-weight:700;letter-spacing:.1em;font-size:12px;color:var(--c)}
+.panel-h h2{font-size:20px;line-height:1.25}
+.panel-h p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.panel-b{padding:16px 18px 18px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}
+.fld{display:grid;gap:6px;min-width:0}
+.fld.wide{grid-column:1/-1}
+.fld label{font-weight:600;font-size:14px}
+.ctl{display:flex;gap:6px;min-width:0}
+.ctl input,.ctl textarea{flex:1;min-width:0;border:1.5px solid var(--line);background:var(--surface-2);border-radius:10px;padding:9px 12px}
+.ctl textarea{min-height:76px;resize:vertical}
+.ctl input:focus,.ctl textarea:focus{border-color:var(--c);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 25%,transparent)}
+.ctl select{flex:none;width:118px;border:1.5px solid var(--c);color:var(--ink);background:var(--surface);border-radius:10px;padding:0 8px;font-size:13px;cursor:pointer;align-self:flex-start;height:42px}
+.fld small{color:var(--muted);font-size:12.5px}
+@media (max-width:720px){.panel-b{grid-template-columns:1fr}.ctl{flex-direction:column}.ctl select{width:100%}}
+
+/* gamify picker */
+.gpick{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.gchip{position:relative;display:grid;justify-items:center;gap:4px;text-align:center;padding:12px 8px 10px;border-radius:14px;border:2px solid var(--line);background:var(--surface-2);cursor:pointer;transition:transform .12s}
+.gchip:hover{transform:translateY(-2px) rotate(-1deg)}
+.gchip svg{width:30px;height:30px;color:var(--gc)}
+.gchip b{font-family:var(--f-tag);font-size:14px;letter-spacing:.03em}
+.gchip span{font-size:12.5px;color:var(--muted)}
+.gchip[aria-pressed="true"]{background:var(--gc);border-color:var(--gc);color:#fff}
+.gchip[aria-pressed="true"] svg{color:#fff}
+.gchip[aria-pressed="true"] span{color:#fff}
+.gchip[aria-pressed="true"]::after{content:"";position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231C2240' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E") center/11px no-repeat}
+
+.formfoot{position:sticky;bottom:12px;margin-top:18px;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.formfoot .btn{box-shadow:0 8px 24px rgba(20,24,50,.18)}
+
+/* card view */
+.stage{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:14px}
+.stage-h{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.stage-h h2{font-size:20px}
+.stage-h p{margin:0;color:var(--muted);font-size:13px}
+.fitbox{position:relative;width:100%;overflow:hidden;border-radius:6px}
+.fitbox > .gc{position:absolute;top:0;left:0;transform-origin:0 0;box-shadow:0 10px 40px rgba(20,24,50,.18)}
+
+/* ===== The card (fixed print object, own colors) ===== */
+.gc{--k:1;width:1123px;height:794px;background:#FBFCFF;color:#1C2240;font-family:var(--f-body);font-size:calc(12.5px*var(--k));line-height:1.4;display:flex;flex-direction:column;overflow:hidden}
+.gc-head{flex:none;display:flex;gap:18px;align-items:stretch;padding:18px 22px 14px;background:#1C2240;color:#fff;position:relative;
+  background-image:radial-gradient(rgba(255,255,255,.08) 1.2px,transparent 1.3px);background-size:14px 14px}
+.gc-head::after{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:repeating-linear-gradient(90deg,#FF6A3D 0 60px,#FFC53D 60px 120px,#14A38B 120px 180px,#6E56CF 180px 240px,#2F80ED 240px 300px,#E0508F 300px 360px)}
+.gc-brand{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.gc-eyebrow{font-family:var(--f-tag);font-weight:700;letter-spacing:.2em;font-size:12px;color:#FFC53D}
+.gc-title{font-family:var(--f-display);font-weight:600;font-size:calc(32px*var(--k));line-height:1.12;color:#fff;margin:0}
+.gc-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.gc-tags span{font-size:12px;border:1.5px solid rgba(255,255,255,.35);border-radius:999px;padding:1px 10px}
+.gc-teacher{flex:none;width:300px;background:#fff;color:#1C2240;border-radius:12px;padding:10px 14px;display:grid;gap:3px;align-content:center;transform:rotate(1.2deg);box-shadow:4px 4px 0 #FFC53D}
+.gc-teacher .lb{font-family:var(--f-tag);font-weight:700;letter-spacing:.12em;font-size:10.5px;color:#FF6A3D}
+.gc-teacher div{display:grid;grid-template-columns:78px 1fr;font-size:13px}
+.gc-teacher div b{font-weight:600;color:#5B6382}
+.gc-body{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1.1fr 1fr;gap:12px;padding:14px 18px 16px}
+.gc-col{min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:10px}
+.gs{background:#fff;border:2px solid var(--c);border-radius:12px;overflow:hidden;flex:none}
+.gs-h{display:flex;align-items:center;gap:7px;padding:5px 10px;background:var(--c);color:#fff}
+.gs-n{display:grid;place-items:center;width:20px;height:20px;border-radius:6px;background:#fff;color:var(--c);font-family:var(--f-tag);font-weight:700;font-size:12px}
+.gs-en{font-family:var(--f-tag);font-weight:700;letter-spacing:.08em;font-size:calc(12.5px*var(--k))}
+.gs-th{font-family:var(--f-display);font-size:calc(12px*var(--k));opacity:.95;margin-left:auto;text-align:right}
+.gs-b{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;padding:7px 10px 8px;margin:0}
+.gs-b dt{font-weight:600;color:var(--c);white-space:nowrap}
+.gs-b dd{margin:0;white-space:pre-line;min-width:0;overflow-wrap:anywhere}
+.gs-b dd.empty{color:#A6ADC6}
+.gs-b.stack{grid-template-columns:1fr}
+.gs-b.stack dt{margin-top:2px}
+.gm{background:#FFC53D;border-color:#1C2240;box-shadow:4px 4px 0 #1C2240;transform:rotate(-.6deg);margin:2px 4px 4px 0}
+.gm .gs-h{background:#1C2240}
+.gm .gs-n{color:#1C2240}
+.gm-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(82px*var(--k)),1fr));gap:6px;padding:8px 10px 4px}
+.gm-tile{display:grid;justify-items:center;text-align:center;gap:1px;background:var(--gc);color:#fff;border-radius:10px;padding:6px 4px 5px;border:2px solid #1C2240}
+.gm-tile svg{width:calc(24px*var(--k));height:calc(24px*var(--k))}
+.gm-tile b{font-family:var(--f-tag);font-size:calc(11.5px*var(--k));line-height:1.1}
+.gm-tile span{font-size:calc(10.5px*var(--k));line-height:1.15;opacity:.95}
+.gm .gs-b dt{color:#1C2240}
+.gm-empty{padding:10px;color:#5B4A12}
+.why{flex:none;background:#fff;border:2px dashed #FF6A3D;border-radius:14px;padding:10px 12px 10px 44px;position:relative}
+.why::before{content:"“";position:absolute;left:10px;top:-6px;font-family:var(--f-display);font-size:58px;line-height:1;color:#FF6A3D}
+.why .wl{font-family:var(--f-tag);font-weight:700;letter-spacing:.08em;font-size:calc(12px*var(--k));color:#FF6A3D}
+.why .wq{font-family:var(--f-display);font-size:calc(15px*var(--k));line-height:1.35;margin-top:2px}
+.fin{flex:none;background:#1C2240;color:#fff;border-radius:14px;padding:10px 12px 12px;position:relative;overflow:hidden}
+.fin::after{content:"";position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;border:16px solid rgba(255,197,61,.22)}
+.fin .fl{font-family:var(--f-tag);font-weight:700;letter-spacing:.12em;font-size:calc(12px*var(--k));color:#FFC53D}
+.fin .fh{font-family:var(--f-display);font-size:calc(13px*var(--k));opacity:.85}
+.fin .fn{font-family:var(--f-display);font-weight:500;font-size:calc(18px*var(--k));line-height:1.2;margin:4px 0 6px;position:relative;z-index:1}
+.fin dl{display:grid;gap:5px;margin:0;position:relative;z-index:1}
+.fin dt{font-weight:600;color:#FFC53D;font-size:calc(11.5px*var(--k))}
+.fin dd{margin:0;white-space:pre-line;overflow-wrap:anywhere}
+
+/* prompt view */
+.pgrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+@media (max-width:900px){.pgrid{grid-template-columns:1fr}}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:12px;overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:7px 14px;cursor:pointer;font-family:var(--f-display);font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+#promptOut{width:100%;min-height:560px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface-2);padding:14px 16px;font-family:var(--f-body);font-size:14.5px;line-height:1.65;resize:vertical}
+.meta{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.side{display:grid;gap:14px}
+.box{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.box h3{font-size:16px;margin-bottom:8px}
+.box ol,.box ul{margin:0;padding-left:20px;display:grid;gap:5px;font-size:14px}
+.box p{margin:0;font-size:14px;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:12px;font-family:var(--f-display);opacity:0;pointer-events:none;transition:.2s;z-index:50;max-width:calc(100% - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* image modal */
+.modal{position:fixed;inset:0;background:rgba(10,12,30,.6);display:grid;place-items:center;padding:16px;z-index:40}
+.modal-in{background:var(--surface);border-radius:var(--r);padding:16px;max-width:980px;width:100%;max-height:calc(100% - 20px);overflow:auto;display:grid;gap:12px}
+.modal-in img{width:100%;border:1.5px solid var(--line);border-radius:6px;background:#fff}
+.modal-in p{margin:0;font-size:14px;color:var(--muted)}
+.offscreen{position:fixed;left:-20000px;top:0;pointer-events:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <div class="tag">CANVA AI · GAME DESIGN</div>
+      <h1>Prompt Generator</h1>
+      <p>ออกแบบไอเดียเกมของคุณครูลงใน Game Idea Card แล้วแปลงเป็น prompt พร้อมคัดลอกไปสร้างเกมใน Canva AI</p>
+    </div>
+    <nav class="steps" aria-label="ขั้นตอน">
+      <button class="step" data-go="form"><b>1</b>กรอกไอเดียเกม</button>
+      <button class="step" data-go="card"><b>2</b>Game Idea Card</button>
+      <button class="step" data-go="prompt"><b>3</b>Prompt</button>
+    </nav>
+  </div>
+
+  <!-- STEP 1 -->
+  <section id="v-form">
+    <div class="banner" id="exampleBanner" hidden>
+      <span><strong>กำลังแสดงข้อมูลตัวอย่าง</strong> · ลองกดดูการ์ดและ prompt ได้เลย เลือกตัวอย่างวิชาอื่นได้ที่ปุ่มด้านล่าง หรือล้างฟอร์มเพื่อกรอกไอเดียของคุณเอง</span>
+      <button class="btn small" id="clearBtn2">ล้างฟอร์ม</button>
+    </div>
+    <nav class="secnav" id="secnav" aria-label="ส่วนของฟอร์ม"></nav>
+    <div class="panels" id="panels"></div>
+    <div class="formfoot">
+      <select class="btn" id="exampleSel" aria-label="ใส่ข้อมูลตัวอย่าง"><option value="">ใส่ข้อมูลตัวอย่าง ▾</option></select>
+      <button class="btn" id="clearBtn">ล้างฟอร์ม</button>
+      <button class="btn primary" id="toCard">สร้าง Game Idea Card →</button>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section id="v-card" hidden>
+    <div class="stage">
+      <div class="stage-h">
+        <div><h2>Game Idea Card</h2><p>ขนาด A4 แนวนอน (297 × 210 มม.) · ตรวจดูแล้วกลับไปแก้ไขได้ตลอด</p></div>
+        <div class="bar">
+          <button class="btn" data-go="form">← แก้ไขข้อมูล</button>
+          <button class="btn" id="imgBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>บันทึกเป็นรูปภาพ</button>
+          <button class="btn primary" data-go="prompt">Prompt Generator →</button>
+        </div>
+      </div>
+      <div class="fitbox" id="fitbox"><div class="gc" id="card"></div></div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section id="v-prompt" hidden>
+    <div class="pgrid">
+      <div class="stage">
+        <div class="stage-h">
+          <div><h2>Prompt สำหรับ Canva AI</h2><p>สร้างจาก Game Idea Card · แก้ไขข้อความในกล่องได้ก่อนคัดลอก</p></div>
+          <div class="seg" role="group" aria-label="รูปแบบ prompt">
+            <button id="mFull" aria-pressed="true">แบบละเอียด</button>
+            <button id="mShort" aria-pressed="false">แบบกระชับ</button>
+          </div>
+        </div>
+        <textarea id="promptOut" spellcheck="false" aria-label="prompt ที่สร้างขึ้น"></textarea>
+        <div class="bar" style="justify-content:space-between">
+          <span class="meta" id="pMeta"></span>
+          <div class="bar">
+            <button class="btn" data-go="card">← กลับไปที่การ์ด</button>
+            <button class="btn" id="regen">สร้างใหม่จากการ์ด</button>
+            <button class="btn primary" id="copyBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>คัดลอก Prompt</button>
+          </div>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="box">
+          <h3>นำไปใช้ใน Canva AI</h3>
+          <ol>
+            <li>เข้า canva.com และเข้าสู่ระบบ</li>
+            <li>กดปุ่ม <b>Canva AI</b></li>
+            <li>เลือก <b>โค้ดดิ้ง</b> (Code)</li>
+            <li>วาง prompt แล้วกด <b>สร้าง</b></li>
+            <li>กด <b>ใช้ดีไซน์</b> แล้วเลือกเป็น <b>พรีเซนเทชั่น</b></li>
+            <li>กดพรีเซนต์เพื่อลองเล่น</li>
+            <li>แชร์ให้ “ทุกคนที่มีลิงก์” แล้วส่งลิงก์ให้นักเรียน</li>
+          </ol>
+        </div>
+        <div class="box">
+          <h3>prompt นี้เขียนแบบไหน</h3>
+          <ul>
+            <li><b>บทบาท</b> กำหนดให้ AI เป็นนักพัฒนาเกมการศึกษา</li>
+            <li><b>บริบท</b> บอกผู้สอน ผู้เรียน และเป้าหมาย</li>
+            <li><b>งาน</b> แยกหัวข้อ ระบุตัวเลขและข้อความชัดเจน</li>
+            <li><b>ข้อกำหนด</b> ความเหมาะสมกับวัยและอุปกรณ์</li>
+            <li><b>ตรวจสอบ</b> ให้ AI เช็กว่าเกมเล่นได้จริงก่อนส่ง</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h3>ถ้าผลยังไม่ตรงใจ</h3>
+          <p>AI สร้างแต่ละครั้งไม่เหมือนกัน ลองเล่นก่อนส่งให้นักเรียนทุกครั้ง แล้วพิมพ์สั่งแก้ทีละจุดต่อในแชตเดิม เช่น “ขยายปุ่มคำตอบให้ใหญ่ขึ้น” หรือ “เมื่อตอบผิดให้แสดงคำใบ้ก่อน”</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+</div>
+
+<div class="modal" id="imgModal" hidden>
+  <div class="modal-in" role="dialog" aria-label="รูปภาพ Game Idea Card">
+    <div class="bar" style="justify-content:space-between">
+      <h3 style="font-size:18px">รูปภาพ Game Idea Card (A4 แนวนอน)</h3>
+      <div class="bar"><button class="btn small" id="copyImg">คัดลอกรูป</button><button class="btn small dark" id="closeModal">ปิด</button></div>
+    </div>
+    <p id="imgStatus">กำลังสร้างรูปภาพ…</p>
+    <img id="imgOut" alt="Game Idea Card" hidden>
+  </div>
+</div>
+<div class="offscreen" id="offscreen" aria-hidden="true"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- icons ---------- */
+const P={
+ points:'<circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M7.5 12h9"/>',
+ stars:'<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+ badges:'<circle cx="12" cy="9" r="6"/><path d="M8.5 13.8L7 21l5-3 5 3-1.5-7.2"/>',
+ lives:'<path d="M12 20s-7-4.4-9-8.6C1.6 8.3 3.6 5 6.8 5c2 0 3.4 1.1 5.2 3 1.8-1.9 3.2-3 5.2-3 3.2 0 5.2 3.3 3.8 6.4C19 15.6 12 20 12 20z"/>',
+ timer:'<circle cx="12" cy="13.5" r="7.5"/><path d="M12 10v3.5l2.5 2M9.5 2.5h5M12 2.5V6"/>',
+ progress:'<rect x="2.5" y="8.5" width="19" height="7" rx="3.5"/><path d="M6 12h7" stroke-width="3"/>',
+ levels:'<path d="M3 20h5v-5h5v-5h5V5h3"/>',
+ rewards:'<rect x="3.5" y="9" width="17" height="11" rx="1.5"/><path d="M3 9h18M12 9v11M12 9C10 5 6 5 6 7.2S9.5 9 12 9zm0 0c2-4 6-4 6-1.8S14.5 9 12 9z"/>',
+ unlock:'<rect x="4.5" y="11" width="15" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.6-1.7"/>',
+ mission:'<path d="M5 21V4M5 4h12l-2.5 4L17 12H5"/>',
+ streak:'<path d="M12 21c-4 0-6.5-2.7-6.5-6.2 0-3.6 3-5.6 3.6-9.3 2 1.2 3 3 3.2 4.8 1-.8 1.6-2 1.7-3.4 2.4 2 4.5 4.8 4.5 7.9 0 3.5-2.5 6.2-6.5 6.2z"/>',
+ leaderboard:'<path d="M3 21v-7h6v7M9 21V9h6v12M15 21v-5h6v5M2 21h20"/>',
+ bonus:'<path d="M13 2L4.5 13.5H11L10 22l8.5-11.5H12z"/>'
+};
+const icon=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[k]}</svg>`;
+const GC=['#FF6A3D','#E0A100','#14A38B','#6E56CF','#2F80ED','#E0508F','#2E9E5B'];
+const GAMIFY=[
+ ['points','Points','คะแนน','ระบบคะแนน (Points): ตอบถูกได้ +10 คะแนน แสดงคะแนนรวมที่มุมบนของจอตลอดเวลา'],
+ ['stars','Stars','ดาวสะสม','ดาวสะสม (Stars): ตอบถูกได้ดาว 1 ดวง มีแอนิเมชันดาวลอยเข้าช่องสะสม และสรุปจำนวนดาวตอนจบเกม'],
+ ['badges','Badges','เหรียญรางวัล','เหรียญรางวัล (Badges): มอบเหรียญเมื่อทำเงื่อนไขพิเศษสำเร็จ เช่น ตอบถูก 5 ข้อแรกติดกัน หรือจบเกมโดยหัวใจไม่ลด แสดงเหรียญที่ได้ในหน้าสรุปผล'],
+ ['lives','Lives','พลังชีวิต','พลังชีวิต (Lives): เริ่มต้นมีหัวใจ 3 ดวง ตอบผิดเสีย 1 ดวง แสดงหัวใจที่มุมบนของจอ'],
+ ['timer','Timer','เวลา','ตัวจับเวลา (Timer): นับถอยหลัง 3 นาที แสดงเวลาที่เหลือชัดเจน และเปลี่ยนเป็นสีแดงเมื่อเหลือ 10 วินาที'],
+ ['progress','Progress Bar','แถบความก้าวหน้า','แถบความก้าวหน้า (Progress Bar): แสดงว่าทำไปแล้วกี่ข้อ/กี่ด่าน จากทั้งหมด'],
+ ['levels','Levels','ด่าน/ระดับ','ด่าน/ระดับ (Levels): แบ่งเกมเป็นด่าน ความยากเพิ่มขึ้นทีละขั้น มีหน้าจอ “ผ่านด่าน!” คั่นระหว่างด่าน'],
+ ['rewards','Rewards','รางวัล','รางวัล (Rewards): ได้ของรางวัลที่เข้ากับธีมเกมเมื่อผ่านด่านหรือจบเกม'],
+ ['unlock','Unlock','ปลดล็อก','ปลดล็อก (Unlock): ทำสำเร็จแล้วปลดล็อกด่าน ฉาก หรือของใหม่ แสดงไอคอนกุญแจที่ถูกเปิด'],
+ ['mission','Mission','ภารกิจ','ภารกิจ (Mission): แสดงภารกิจของด่านบนหน้าจอ และติ๊กถูกเมื่อทำภารกิจสำเร็จ'],
+ ['streak','Streak','ตอบถูกต่อเนื่อง','ตอบถูกต่อเนื่อง (Streak): ตอบถูกติดกัน 3 ข้อ ขึ้นข้อความ “Combo!” และได้คะแนนพิเศษ'],
+ ['leaderboard','Leaderboard','กระดานคะแนน','กระดานคะแนน (Leaderboard): ให้ผู้เล่นพิมพ์ชื่อก่อนเริ่ม และหน้าสรุปแสดงอันดับคะแนนสูงสุด 5 อันดับในเครื่องนี้'],
+ ['bonus','Bonus','โบนัส','โบนัส (Bonus): สุ่มมีคำถามโบนัสหรือไอเท็มพิเศษปรากฏ ตอบถูกได้คะแนนเพิ่มเป็น 2 เท่า']
+].map((g,i)=>({k:g[0],en:g[1],th:g[2],spec:g[3],c:GC[i%GC.length]}));
+
+/* ---------- form schema ---------- */
+const GRADES=['ป.1','ป.2','ป.3','ป.4','ป.5','ป.6','ม.1','ม.2','ม.3','ป.1–ป.3','ป.4–ป.6','ม.1–ม.3'];
+const SECTIONS=[
+ {id:'teacher',no:1,en:'TEACHER INFO',th:'ข้อมูลครู',hint:'บอกบริบทของเกม: ใครเป็นผู้สอน สอนกลุ่มสาระไหน ระดับชั้นใด',c:'#5B6382',fields:[
+  {id:'t_name',label:'ชื่อครู',ph:'เช่น ครูใจดี มีสุข'},
+  {id:'t_area',label:'กลุ่มสาระ',opts:['ภาษาไทย','คณิตศาสตร์','วิทยาศาสตร์และเทคโนโลยี','สังคมศึกษา ศาสนาและวัฒนธรรม','สุขศึกษาและพลศึกษา','ศิลปะ','การงานอาชีพ','ภาษาต่างประเทศ'],mode:'set'},
+  {id:'t_grade',label:'ระดับชั้นที่สอน',opts:GRADES,mode:'add'}]},
+ {id:'learn',no:2,en:'LEARN',th:'ผู้เรียนจะได้เรียนรู้อะไร?',hint:'เริ่มจากเป้าหมายการเรียนรู้ก่อน แล้วค่อยออกแบบเกมให้รับใช้เป้าหมายนั้น',c:'#14A38B',fields:[
+  {id:'subject',label:'วิชา',short:'วิชา',opts:['คณิตศาสตร์','ภาษาไทย','ภาษาอังกฤษ','วิทยาศาสตร์','สังคม','คอมพิวเตอร์','สุขศึกษา','ศิลปะ'],mode:'set'},
+  {id:'topic',label:'เรื่อง',short:'เรื่อง',ph:'เช่น คำศัพท์หมวดสัตว์, การบวกเลขไม่เกิน 100'},
+  {id:'target',label:'กลุ่มเป้าหมาย / ระดับชั้น',short:'ผู้เรียน',opts:GRADES,mode:'set'},
+  {id:'goal',label:'เป้าหมายการเรียนรู้',short:'เป้าหมาย',opts:['จำ','เข้าใจ','ฝึกใช้','ประยุกต์','วิเคราะห์'],mode:'add',ph:'เช่น จำและเข้าใจความหมายคำศัพท์',help:'ระดับการเรียนรู้ เลือกได้มากกว่า 1'},
+  {id:'practice',label:'นักเรียนจะได้ฝึกอะไร',short:'ได้ฝึก',opts:['คำศัพท์','การอ่านจับใจความ','การบวก-ลบ','การคูณหาร','การแก้ปัญหา','การเรียงลำดับ','การคิดวิเคราะห์','การสังเกต','การสื่อสาร'],mode:'add',wide:true}]},
+ {id:'idea',no:3,en:'GAME IDEA',th:'เกมนี้เกี่ยวกับอะไร?',hint:'ตั้งชื่อเกมและเรื่องราว ให้เด็กรู้สึกว่ากำลังเข้าไปอยู่ในโลกของเกม',c:'#6E56CF',fields:[
+  {id:'g_name',label:'ชื่อเกม',short:'ชื่อเกม',ph:'เช่น นักดำน้ำล่าคำศัพท์'},
+  {id:'g_theme',label:'ธีมเกม',short:'ธีม',opts:['ผจญภัย','แข่งขัน','สะสมคะแนน','จับคู่','ไขปริศนา','จำลองสถานการณ์','เอาชีวิตรอด','ภารกิจช่วยเหลือ','ร้านค้า','การเดินทาง','โลกแฟนตาซี','อวกาศ','ใต้ทะเล','ห้องเรียน','ฟาร์ม','ปราสาท','เมืองมหัศจรรย์'],mode:'add'},
+  {id:'g_role',label:'ผู้เล่นรับบทเป็น',short:'รับบท',opts:['นักสำรวจ','นักเรียน','นักสืบ','เชฟ','นักบินอวกาศ','เจ้าของร้าน','นักผจญภัย','ฮีโร่','ตัวการ์ตูน'],mode:'set'},
+  {id:'g_mission',label:'ภารกิจหลัก',short:'ภารกิจ',opts:['เก็บดาว','ผ่านด่าน','ช่วยตัวละคร','แก้ปริศนา','สะสมของ','ตอบคำถามให้ครบ','ไปถึงเส้นชัย','ปลดล็อกสมบัติ'],mode:'add'}]},
+ {id:'play',no:4,en:'PLAY',th:'ผู้เล่นต้องทำอะไร?',hint:'เล่าลำดับการเล่นทีละขั้น ยิ่งชัด AI ยิ่งสร้างเกมได้ตรงใจ',c:'#2F80ED',fields:[
+  {id:'p_how',label:'วิธีการเล่น',short:'วิธีเล่น',type:'area',wide:true,ph:'เล่าทีละบรรทัด เช่น\nตัวละครเดินสำรวจฉาก\nเมื่อเจอกล่องปริศนาจะมีคำถามขึ้นมา\nตอบถูกแล้วเดินต่อได้'},
+  {id:'p_do',label:'ผู้เล่นต้องทำอะไร',short:'ต้องทำ',type:'area',ph:'เช่น ดูภาพแล้วเลือกคำศัพท์ที่ถูกต้อง'},
+  {id:'p_interact',label:'ผู้เล่นโต้ตอบกับเกมอย่างไร',short:'โต้ตอบ',opts:['คลิกคำตอบ','ลากและวาง','พิมพ์คำตอบ','จับคู่','เลือกคำตอบ','ควบคุมตัวละคร','ยิงเป้าคำตอบ','เก็บของ','เปิดการ์ด','เรียงลำดับ','หมุนวงล้อ','ทอยลูกเต๋า'],mode:'add'}]},
+ {id:'challenge',no:5,en:'CHALLENGE',th:'โจทย์และความท้าทาย',hint:'ระบุจำนวนและตัวอย่างโจทย์ให้ชัด AI จะสร้างโจทย์ที่เหลือตามแบบที่ให้',c:'#FF6A3D',fields:[
+  {id:'q_type',label:'รูปแบบโจทย์',short:'รูปแบบ',opts:['ปรนัย 3 ตัวเลือก','ปรนัย 4 ตัวเลือก','จับคู่','เติมคำ','เรียงลำดับ','พิมพ์ตอบ','ลากวาง','สุ่มคำถาม'],mode:'add'},
+  {id:'q_count',label:'จำนวนข้อ / จำนวนด่าน',short:'จำนวน',opts:['5 ข้อ','10 ข้อ','15 ข้อ','3 ด่าน','5 ด่าน'],mode:'set'},
+  {id:'q_level',label:'ระดับความยาก',short:'ความยาก',opts:['ง่าย','ปานกลาง','ยาก','ง่ายไปยาก'],mode:'set'},
+  {id:'q_extra',label:'ความท้าทายเพิ่มเติม',short:'เพิ่มเติม',opts:['คำถามสุ่ม','จับเวลา','มีตัวเลือกหลอก','มี Hint'],mode:'add'},
+  {id:'q_example',label:'ตัวอย่างโจทย์',short:'ตัวอย่าง',type:'area',wide:true,ph:'ใส่ 1–3 ข้อ บรรทัดละข้อ เช่น\n12 + 8 = ? (ตัวเลือก 18 / 20 / 22)\nภาพแมว → cat / car / cap'}]},
+ {id:'gamify',no:6,en:'GAMIFY IT!',th:'อะไรจะทำให้เด็กอยากเล่นต่อ?',hint:'แตะเลือกระบบจูงใจที่ต้องการ (เลือกได้หลายแบบ) แต่ละแบบจะถูกแปลงเป็นกติกาที่ชัดเจนใน prompt',c:'#E0A100',gamify:true,fields:[
+  {id:'gm_because',label:'ฉันเลือกใช้ gamification แบบนี้ เพราะ',short:'เพราะ',type:'area'},
+  {id:'gm_more',label:'อะไรจะทำให้เด็กอยากเล่นต่อ',short:'อยากเล่นต่อ',type:'area'}]},
+ {id:'result',no:7,en:'RESULT',th:'ผลลัพธ์ในเกม',hint:'กำหนดว่าเกิดอะไรขึ้นเมื่อตอบถูก ตอบผิด ชนะ และแพ้',c:'#2E9E5B',fields:[
+  {id:'r_right',label:'ตอบถูกแล้วเกิดอะไร',short:'ตอบถูก',opts:['ได้คะแนน','ได้ดาว','ตัวละครเดินหน้า','ผ่านด่าน','ได้ของรางวัล','มีเอฟเฟกต์','มีคำชม'],mode:'add'},
+  {id:'r_wrong',label:'ตอบผิดแล้วเกิดอะไร',short:'ตอบผิด',opts:['เสียหัวใจ','ลองใหม่','มีคำใบ้','คะแนนลด','หยุดเวลา','ย้อนกลับ'],mode:'add'},
+  {id:'r_win',label:'ชนะเมื่อ',short:'ชนะเมื่อ',opts:['ตอบครบทุกข้อ','ถึงเส้นชัย','สะสมคะแนนครบ','ผ่านทุกด่าน','ช่วยตัวละครสำเร็จ'],mode:'add'},
+  {id:'r_lose',label:'แพ้เมื่อ',short:'แพ้เมื่อ',opts:['หัวใจหมด','หมดเวลา','คะแนนไม่ถึง','ตอบผิดเกินกำหนด'],mode:'add'}]},
+ {id:'look',no:8,en:'LOOK & FEEL',th:'หน้าตาเกมของฉัน',hint:'บอกสไตล์ภาพ สี ตัวละคร และสิ่งที่ต้องมีบนหน้าจอ',c:'#E0508F',fields:[
+  {id:'l_style',label:'สไตล์ภาพ',short:'สไตล์',opts:['2D Cartoon','3D Cartoon','Cute','Fantasy','Modern','Adventure','Space','Underwater','Magical','Classroom','Pixel','Minimal'],mode:'add'},
+  {id:'l_color',label:'โทนสี',short:'โทนสี',opts:['Pastel','Bright Colorful','Blue','Green','Purple','Orange','Rainbow','Soft Tone'],mode:'add'},
+  {id:'l_char',label:'ตัวละคร / ฉาก',short:'ตัวละคร/ฉาก',opts:['เด็กน่ารัก','สัตว์','หุ่นยนต์','มอนสเตอร์','นักเวท','นักบินอวกาศ','ตัวการ์ตูน'],mode:'add'},
+  {id:'l_ui',label:'รูปแบบ UI',short:'UI',opts:['ปุ่มใหญ่','ฟอนต์อ่านง่าย','UI เรียบง่าย','มี progress bar','มีแถบคะแนน','มีหัวใจ','มี timer'],mode:'add'},
+  {id:'l_lang',label:'ภาษาที่ใช้ในเกม',short:'ภาษาในเกม',opts:['ไทย','อังกฤษ','อังกฤษ (คำสั่งภาษาไทย)','ไทย-อังกฤษ'],mode:'set',help:'ช่องเสริม ช่วยให้ AI ใช้ภาษาบนหน้าจอเกมได้ถูกต้อง'}]},
+ {id:'why',no:9,en:'WHY KEEP PLAYING?',th:'ทำไมเด็กถึงอยากเล่นต่อ?',hint:'คิดถึงแรงจูงใจ ความท้าทาย รางวัล และความรู้สึกว่าตัวเองก้าวหน้า แล้วสรุปเป็นประโยคสั้น ๆ',c:'#FF6A3D',fields:[
+  {id:'why',label:'เด็กจะอยากเล่นต่อ เพราะ...',type:'area',wide:true,joiner:' และ',opts:['ได้รางวัลทันทีทุกครั้งที่ตอบถูก','เห็นความก้าวหน้าของตัวเองชัดเจน','ความท้าทายค่อย ๆ ยากขึ้นพอดีกับความสามารถ','อยากรู้ว่าด่านต่อไปจะมีอะไร','ได้เป็นตัวละครในเรื่องราวที่สนุก','ตอบผิดแล้วยังได้ลองใหม่ ไม่รู้สึกกดดัน'],mode:'add'}]},
+ {id:'final',no:10,en:'FINAL SUMMARY',th:'สรุปไอเดียเกมของฉัน',hint:'กดปุ่ม “เติมสรุปอัตโนมัติ” เพื่อร่างจากข้อมูลด้านบน แล้วแก้ถ้อยคำได้ตามต้องการ',c:'#1C2240',auto:true,fields:[
+  {id:'f_name',label:'ชื่อเกม',ph:'เว้นว่างไว้จะใช้ชื่อจากข้อ 3'},
+  {id:'f_gamify',label:'Gamification ที่ใช้',ph:'เติมจากข้อ 6 อัตโนมัติ'},
+  {id:'f_concept',label:'สรุปแนวคิดเกมแบบย่อ',type:'area',wide:true},
+  {id:'f_highlight',label:'จุดเด่นของเกม',type:'area'},
+  {id:'f_outcome',label:'ผลลัพธ์การเรียนรู้ที่คาดหวัง',type:'area'}]}
+];
+const FIELDS={};SECTIONS.forEach(s=>s.fields.forEach(f=>FIELDS[f.id]=f));
+
+/* ---------- state ---------- */
+const EXAMPLES=[
+{label:'ภาษาอังกฤษ ป.4 · Ocean Word Diver',
+ t_name:'ครูตัวอย่าง ใจดี',t_area:'ภาษาต่างประเทศ',t_grade:'ป.4',
+ subject:'ภาษาอังกฤษ',topic:'คำศัพท์หมวดสัตว์ทะเล (Sea Animals)',target:'ป.4',goal:'จำ, เข้าใจ',practice:'คำศัพท์, การสังเกต',
+ g_name:'Ocean Word Diver นักดำน้ำล่าคำศัพท์',g_theme:'ใต้ทะเล, ผจญภัย',g_role:'นักดำน้ำสำรวจใต้ทะเล',g_mission:'สะสมไข่มุกให้ครบเพื่อปลดล็อกหีบสมบัติ',
+ p_how:'นักดำน้ำว่ายสำรวจใต้ทะเลด้วยปุ่มลูกศร\nเมื่อแตะหอยมุก จะมีภาพสัตว์ทะเลปรากฏขึ้น\nเลือกคำศัพท์ภาษาอังกฤษที่ตรงกับภาพ\nตอบถูกได้ไข่มุก 1 เม็ด แล้วว่ายต่อได้ทันที',
+ p_do:'ดูภาพสัตว์ทะเลแล้วเลือกคำศัพท์ที่สะกดถูกต้อง',p_interact:'ควบคุมตัวละคร, คลิกคำตอบ',
+ q_type:'ปรนัย 3 ตัวเลือก',q_count:'10 ข้อ',q_level:'ง่ายไปยาก',q_extra:'คำถามสุ่ม, มีตัวเลือกหลอก, มี Hint',
+ q_example:'ภาพปลาหมึก → octopus / octagon / ocean\nภาพเต่าทะเล → turtle / turkey / tutor',
+ gamify:['points','stars','lives','progress','unlock','streak'],
+ gm_because:'เด็ก ป.4 ชอบเห็นผลทันทีเมื่อตอบถูก และชอบสะสมของ',gm_more:'อยากรู้ว่าในหีบสมบัติมีอะไร และอยากทำ Combo ให้ได้มากที่สุด',
+ r_right:'ได้คะแนน, ได้ดาว, มีเอฟเฟกต์',r_wrong:'เสียหัวใจ, มีคำใบ้',r_win:'ตอบครบทุกข้อ, ปลดล็อกหีบสมบัติ',r_lose:'หัวใจหมด',
+ l_style:'2D Cartoon, Underwater, Cute',l_color:'Bright Colorful, Blue',l_char:'เด็กน่ารัก, สัตว์',l_ui:'ปุ่มใหญ่, ฟอนต์อ่านง่าย, มีแถบคะแนน, มีหัวใจ',l_lang:'อังกฤษ (คำสั่งภาษาไทย)',
+ why:'ทุกครั้งที่ตอบถูกจะได้ไข่มุก และเห็นหีบสมบัติใกล้เปิดขึ้นเรื่อย ๆ'
+},
+{label:'คณิตศาสตร์ ป.3 · ร้านขนมคิดเงินไว',
+ t_name:'ครูตัวอย่าง ใจดี',t_area:'คณิตศาสตร์',t_grade:'ป.3',
+ subject:'คณิตศาสตร์',topic:'การบวกและการลบเงิน (ไม่เกิน 100 บาท)',target:'ป.3',goal:'เข้าใจ, ฝึกใช้, ประยุกต์',practice:'การบวก-ลบ, การแก้ปัญหา',
+ g_name:'ร้านขนมคิดเงินไว',g_theme:'ร้านค้า, จำลองสถานการณ์',g_role:'เจ้าของร้าน',g_mission:'ขายขนมให้ลูกค้าครบ 10 คน เพื่อปลดล็อกร้านสาขาใหม่',
+ p_how:'ลูกค้าเดินเข้าร้านทีละคน พร้อมบอกรายการขนมที่อยากซื้อ\nผู้เล่นคิดราคารวม แล้วเลือกคำตอบ\nบางข้อให้คิดเงินทอนจากธนบัตรที่ลูกค้าจ่าย\nตอบถูก ลูกค้ายิ้มและจ่ายเงิน แล้วลูกค้าคนต่อไปเข้าร้าน',
+ p_do:'คิดราคารวมของขนม และคิดเงินทอนให้ถูกต้อง',p_interact:'เลือกคำตอบ, ลากและวาง',
+ q_type:'ปรนัย 4 ตัวเลือก',q_count:'10 ข้อ',q_level:'ง่ายไปยาก',q_extra:'คำถามสุ่ม, มี Hint',
+ q_example:'ซื้อโดนัท 2 ชิ้น ชิ้นละ 15 บาท ต้องจ่ายกี่บาท? (25 / 30 / 35 / 40)\nขนมราคา 35 บาท ลูกค้าจ่าย 50 บาท ต้องทอนกี่บาท? (5 / 10 / 15 / 25)',
+ gamify:['points','rewards','progress','unlock','bonus'],
+ gm_because:'เด็กได้เห็นร้านของตัวเองเติบโต และได้รางวัลจากการคิดเงินถูก',gm_more:'อยากปลดล็อกร้านสาขาใหม่และขนมแบบใหม่',
+ r_right:'ได้คะแนน, ได้ของรางวัล, มีคำชม',r_wrong:'ลองใหม่, มีคำใบ้',r_win:'ขายขนมให้ลูกค้าครบ 10 คน',r_lose:'ตอบผิดเกินกำหนด',
+ l_style:'2D Cartoon, Cute',l_color:'Pastel',l_char:'เด็กน่ารัก, ตัวการ์ตูน',l_ui:'ปุ่มใหญ่, ฟอนต์อ่านง่าย, มีแถบคะแนน, มี progress bar',l_lang:'ไทย',
+ why:'ได้เป็นเจ้าของร้านจริง ๆ และเห็นร้านของตัวเองใหญ่ขึ้นทุกครั้งที่คิดเงินถูก'
+},
+{label:'ภาษาไทย ป.1 · นักสืบตามหาสระ',
+ t_name:'ครูตัวอย่าง ใจดี',t_area:'ภาษาไทย',t_grade:'ป.1',
+ subject:'ภาษาไทย',topic:'การประสมคำด้วยสระเสียงสั้นและเสียงยาว',target:'ป.1',goal:'จำ, เข้าใจ',practice:'คำศัพท์, การสังเกต',
+ g_name:'นักสืบตามหาสระ',g_theme:'ไขปริศนา, เมืองมหัศจรรย์',g_role:'นักสืบ',g_mission:'ตามหาสระที่หายไปจากป้ายร้านค้าในเมือง ให้ครบทุกป้าย',
+ p_how:'นักสืบเดินสำรวจเมือง เจอป้ายที่สระหายไป\nแสดงภาพประกอบคำ และคำที่เว้นช่องสระไว้\nผู้เล่นลากสระที่ถูกต้องมาวางในช่องว่าง\nเติมถูก ป้ายจะสว่างขึ้นและอ่านออกเสียงคำนั้น',
+ p_do:'ดูภาพแล้วเลือกสระที่ทำให้คำถูกต้อง',p_interact:'ลากและวาง, คลิกคำตอบ',
+ q_type:'ลากวาง, ปรนัย 3 ตัวเลือก',q_count:'10 ข้อ',q_level:'ง่าย',q_extra:'คำถามสุ่ม, มี Hint',
+ q_example:'ภาพปลา → ป_ (า / ิ / ุ)\nภาพหมู → หม_ (ู / ี / ะ)',
+ gamify:['stars','badges','progress','mission'],
+ gm_because:'เด็ก ป.1 ชอบสะสมดาวและเหรียญ และไม่ควรถูกกดดันด้วยเวลา',gm_more:'อยากได้เหรียญนักสืบระดับทอง',
+ r_right:'ได้ดาว, มีเอฟเฟกต์, มีคำชม',r_wrong:'ลองใหม่, มีคำใบ้',r_win:'ตอบครบทุกข้อ',r_lose:'',
+ l_style:'2D Cartoon, Cute, Magical',l_color:'Pastel, Soft Tone',l_char:'เด็กน่ารัก, สัตว์',l_ui:'ปุ่มใหญ่, ฟอนต์อ่านง่าย, UI เรียบง่าย, มี progress bar',l_lang:'ไทย',
+ why:'ได้เป็นนักสืบที่ช่วยเมือง ตอบผิดก็ลองใหม่ได้โดยไม่ถูกลงโทษ'
+}];
+const EXAMPLE=EXAMPLES[0];
+let data={gamify:[]}; let isExample=false; let view='form'; let pmode='full';
+const KEY='gic-draft-v1';
+function save(){try{localStorage.setItem(KEY,JSON.stringify({data,isExample}))}catch(e){}}
+function load(){try{const r=JSON.parse(localStorage.getItem(KEY)||'null');if(r&&r.data){data=r.data;data.gamify=data.gamify||[];isExample=!!r.isExample;return true}}catch(e){}return false}
+const v=id=>String(data[id]??'').trim();
+
+/* ---------- render form ---------- */
+function fieldHTML(f){
+  const opts=f.opts?`<select data-for="${f.id}" aria-label="แนวทางสำหรับ ${esc(f.label)}"><option value="">แนวทาง ▾</option>${f.opts.map(o=>`<option>${esc(o)}</option>`).join('')}</select>`:'';
+  const inp=f.type==='area'?`<textarea id="f_${f.id}" placeholder="${esc(f.ph||'')}"></textarea>`:`<input id="f_${f.id}" type="text" placeholder="${esc(f.ph||(f.opts?'พิมพ์เอง หรือเลือกจากแนวทาง':''))}">`;
+  const help=f.help||(f.opts&&f.mode==='add'?'เลือกจากแนวทางได้หลายข้อ หรือพิมพ์เพิ่มเอง':'');
+  return `<div class="fld${f.wide?' wide':''}"><label for="f_${f.id}">${esc(f.label)}</label><div class="ctl">${inp}${opts}</div>${help?`<small>${esc(help)}</small>`:''}</div>`;
+}
+function renderForm(){
+  $('#secnav').innerHTML=SECTIONS.map(s=>`<a href="#sec-${s.id}" data-sec="${s.id}" style="--c:${s.c}"><i>${s.no}</i>${esc(s.th.replace('?',''))}</a>`).join('');
+  $('#panels').innerHTML=SECTIONS.map(s=>{
+    const gm=s.gamify?`<div class="gpick">${GAMIFY.map(g=>`<button type="button" class="gchip" data-g="${g.k}" aria-pressed="false" style="--gc:${g.c}">${icon(g.k)}<b>${g.en}</b><span>${g.th}</span></button>`).join('')}</div>`:'';
+    const auto=s.auto?`<div class="fld wide"><div class="bar"><button type="button" class="btn small dark" id="autoSum">เติมสรุปอัตโนมัติจากข้อมูลด้านบน</button><small>เติมเฉพาะช่องที่ยังว่าง ถ้าต้องการร่างใหม่ ให้ลบข้อความในช่องนั้นก่อน</small></div></div>`:'';
+    return `<article class="panel" id="sec-${s.id}" style="--c:${s.c}">
+      <header class="panel-h"><div class="num">${s.no}</div><div><div class="en">${s.en}</div><h2>${esc(s.th)}</h2><p>${esc(s.hint)}</p></div></header>
+      <div class="panel-b">${gm}${auto}${s.fields.map(fieldHTML).join('')}</div></article>`;
+  }).join('');
+  // events
+  document.querySelectorAll('#panels input, #panels textarea').forEach(el=>{
+    el.addEventListener('input',()=>{data[el.id.slice(2)]=el.value;touched();});
+  });
+  document.querySelectorAll('#panels select').forEach(sel=>{
+    sel.addEventListener('change',()=>{
+      const f=FIELDS[sel.dataset.for],el=$('#f_'+f.id),val=sel.value;sel.value='';if(!val)return;
+      if(f.mode==='set'||!el.value.trim()) el.value=val;
+      else{
+        const j=f.joiner||', ';
+        const parts=el.value.split(/,\s*|\s+และ/).map(x=>x.trim());
+        if(!parts.includes(val)) el.value=el.value.replace(/[\s,]+$/,'')+j+val;
+      }
+      el.dispatchEvent(new Event('input'));el.focus();
+    });
+  });
+  document.querySelectorAll('.gchip').forEach(b=>b.addEventListener('click',()=>{
+    const k=b.dataset.g,a=data.gamify||(data.gamify=[]);const i=a.indexOf(k);
+    i<0?a.push(k):a.splice(i,1);b.setAttribute('aria-pressed',i<0);touched();
+  }));
+  $('#autoSum').addEventListener('click',()=>{autoSummary(true);toast('ร่างสรุปให้แล้ว แก้ไขถ้อยคำได้เลย')});
+}
+function fillForm(){
+  Object.keys(FIELDS).forEach(id=>{const el=$('#f_'+id);if(el)el.value=data[id]||''});
+  document.querySelectorAll('.gchip').forEach(b=>b.setAttribute('aria-pressed',(data.gamify||[]).includes(b.dataset.g)));
+  updateNav();$('#exampleBanner').hidden=!isExample;
+}
+function updateNav(){
+  SECTIONS.forEach(s=>{const done=s.fields.some(f=>v(f.id))||(s.gamify&&data.gamify.length);const a=document.querySelector(`.secnav a[data-sec="${s.id}"]`);if(a)a.classList.toggle('done',!!done)});
+}
+function touched(){if(isExample){isExample=false;$('#exampleBanner').hidden=true}updateNav();save();}
+
+/* ---------- auto summary ---------- */
+const gList=()=>(data.gamify||[]).map(k=>GAMIFY.find(g=>g.k===k)).filter(Boolean);
+function autoSummary(onlyEmpty){
+  const set=(id,val)=>{if(!onlyEmpty||!v(id)){data[id]=val}};
+  const gl=gList();
+  set('f_name',v('g_name'));
+  set('f_gamify',gl.map(g=>`${g.en} (${g.th})`).join(', '));
+  const concept=[
+    v('g_theme')&&`เกมแนว${v('g_theme').replace(/,\s*/g,' / ')}`,
+    v('g_role')&&`ผู้เล่นรับบทเป็น${v('g_role')}`,
+    v('g_mission')&&`มีภารกิจ${v('g_mission')}`,
+    v('p_do')&&`ระหว่างทางต้อง${v('p_do')}`,
+    (v('subject')||v('topic'))&&`เพื่อฝึก${v('practice')?v('practice').replace(/,\s*/g,' และ'):'ทักษะ'}ในวิชา${v('subject')}${v('topic')?' เรื่อง'+v('topic'):''}`
+  ].filter(Boolean).join(' ');
+  set('f_concept',concept);
+  const hl=[];
+  if(gl.length) hl.push(`ใช้ระบบ ${gl.slice(0,4).map(g=>g.th).join(' ')} กระตุ้นให้อยากเล่นต่อ`);
+  if(v('l_style')||v('l_color')) hl.push(`ภาพสไตล์ ${[v('l_style'),v('l_color')].filter(Boolean).join(', ')} เหมาะกับวัย`);
+  if(v('r_wrong')) hl.push(`ตอบผิดแล้ว${v('r_wrong').replace(/,\s*/g,' / ')} ไม่ตัดสิทธิ์ทันที`);
+  set('f_highlight',hl.join('\n'));
+  const tg=v('target')||v('t_grade');
+  set('f_outcome',`นักเรียน${tg?'ชั้น '+tg:''}สามารถ${v('goal')?v('goal').replace(/,\s*/g,' ')+' ':''}${v('topic')||'เนื้อหาที่เรียน'}${v('practice')?' ผ่านการฝึก'+v('practice').replace(/,\s*/g,' และ'):''} ได้อย่างสนุกและมั่นใจ`);
+  fillForm();save();
+}
+
+/* ---------- card ---------- */
+function dd(val){return val?`<dd>${esc(val)}</dd>`:`<dd class="empty">—</dd>`}
+function sec(sid,ids,opts={}){
+  const s=SECTIONS.find(x=>x.id===sid);
+  const rows=ids.map(id=>`<dt>${esc(FIELDS[id].short||FIELDS[id].label)}</dt>${dd(v(id))}`).join('');
+  return `<section class="gs" style="--c:${s.c}"><div class="gs-h"><span class="gs-n">${s.no}</span><span class="gs-en">${s.en}</span><span class="gs-th">${esc(s.th)}</span></div><dl class="gs-b${opts.stack?' stack':''}">${rows}</dl></section>`;
+}
+function buildCard(){
+  const s6=SECTIONS.find(x=>x.id==='gamify');const gl=gList();
+  const tiles=gl.length?`<div class="gm-tiles">${gl.map(g=>`<div class="gm-tile" style="--gc:${g.c}">${icon(g.k)}<b>${g.en}</b><span>${g.th}</span></div>`).join('')}</div>`:`<div class="gm-empty">ยังไม่ได้เลือกระบบจูงใจ</div>`;
+  const themes=(v('g_theme')?v('g_theme').split(/,\s*/):[]).concat(v('subject')?[v('subject')]:[]).concat(v('target')?['ผู้เรียน '+v('target')]:[]);
+  const fname=v('f_name')||v('g_name');
+  return `
+  <header class="gc-head">
+    <div class="gc-brand"><span class="gc-eyebrow">GAME IDEA CARD</span><h1 class="gc-title">${esc(v('g_name')||'ชื่อเกมของฉัน')}</h1>
+      <div class="gc-tags">${themes.map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
+    <div class="gc-teacher"><span class="lb">1 · TEACHER INFO</span>
+      <div><b>ครู</b><span>${esc(v('t_name')||'—')}</span></div>
+      <div><b>กลุ่มสาระ</b><span>${esc(v('t_area')||'—')}</span></div>
+      <div><b>ชั้นที่สอน</b><span>${esc(v('t_grade')||'—')}</span></div></div>
+  </header>
+  <div class="gc-body">
+    <div class="gc-col">
+      ${sec('learn',['subject','topic','target','goal','practice'])}
+      ${sec('idea',['g_theme','g_role','g_mission'])}
+      ${sec('play',['p_how','p_do','p_interact'],{stack:true})}
+    </div>
+    <div class="gc-col">
+      ${sec('challenge',['q_type','q_count','q_level','q_extra','q_example'])}
+      <section class="gs gm"><div class="gs-h"><span class="gs-n">6</span><span class="gs-en">${s6.en}</span><span class="gs-th">${esc(s6.th)}</span></div>
+        ${tiles}<dl class="gs-b"><dt>เพราะ</dt>${dd(v('gm_because'))}<dt>อยากเล่นต่อ</dt>${dd(v('gm_more'))}</dl></section>
+      ${sec('result',['r_right','r_wrong','r_win','r_lose'])}
+    </div>
+    <div class="gc-col">
+      ${sec('look',['l_style','l_color','l_char','l_ui','l_lang'])}
+      <div class="why"><div class="wl">9 · WHY KEEP PLAYING?</div><div class="wq">เด็กจะอยากเล่นต่อ เพราะ${esc(v('why')||'…')}</div></div>
+      <div class="fin"><div class="fl">10 · FINAL SUMMARY</div><div class="fh">สรุปไอเดียเกมของฉัน</div>
+        <div class="fn">${esc(fname||'—')}</div>
+        <dl>
+          <dt>แนวคิดเกม</dt><dd>${esc(v('f_concept')||'—')}</dd>
+          <dt>จุดเด่น</dt><dd>${esc(v('f_highlight')||'—')}</dd>
+          <dt>Gamification ที่ใช้</dt><dd>${esc(v('f_gamify')||gl.map(g=>g.en).join(', ')||'—')}</dd>
+          <dt>ผลลัพธ์การเรียนรู้ที่คาดหวัง</dt><dd>${esc(v('f_outcome')||'—')}</dd>
+        </dl></div>
+    </div>
+  </div>`;
+}
+function fitCard(el){
+  let k=1;el.style.setProperty('--k',k);
+  const over=()=>[...el.querySelectorAll('.gc-col')].some(c=>c.scrollHeight>c.clientHeight+1);
+  while(over()&&k>0.55){k=Math.round((k-0.03)*100)/100;el.style.setProperty('--k',k)}
+}
+function scaleCard(){
+  const box=$('#fitbox'),card=$('#card');if(!box||view!=='card')return;
+  const s=box.clientWidth/1123;card.style.transform=`scale(${s})`;box.style.height=(794*s)+'px';
+}
+function renderCard(){const c=$('#card');c.innerHTML=buildCard();scaleCard();
+  (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(()=>{fitCard(c);});}
+
+/* ---------- prompt ---------- */
+const lines=t=>String(t||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
+const list=t=>String(t||'').split(/,\s*|\n+/).map(x=>x.trim()).filter(Boolean);
+function buildPrompt(mode){
+  const full=mode==='full';const o=[];const gl=gList();
+  const name=v('g_name')||v('f_name')||'เกมการเรียนรู้';
+  const tg=v('target')||v('t_grade')||'ประถมศึกษา';
+  const has=(id,w)=>list(v(id)).some(x=>x.includes(w));
+  const timer=has('q_extra','จับเวลา')||gl.some(g=>g.k==='timer');
+  const hint=has('q_extra','Hint')||has('r_wrong','คำใบ้');
+  const lives=gl.some(g=>g.k==='lives')||has('r_wrong','หัวใจ')||has('r_lose','หัวใจ');
+  const lang=v('l_lang');
+  const H=t=>{o.push('');o.push(t)};
+
+  if(full){
+    o.push('[บทบาท]');
+    o.push('คุณคือนักพัฒนาเกมการศึกษาสำหรับเด็ก และนักออกแบบ UI ที่เชี่ยวชาญการสร้างเกมบนเว็บที่เล่นได้จริงทันที');
+    H('[บริบท]');
+    const who=[v('t_name')&&`ครู${v('t_name').replace(/^ครู/,'')}`,v('t_area')&&`กลุ่มสาระการเรียนรู้${v('t_area')}`,v('t_grade')&&`สอนชั้น ${v('t_grade')}`].filter(Boolean).join(' ');
+    o.push(`ผู้ใช้คือ${who||'ครูผู้สอน'} ต้องการเกมไปใช้สอนในห้องเรียน ผู้เล่นคือนักเรียนชั้น ${tg}`);
+    H('[งาน]');
+  }
+  o.push(`ช่วยสร้างเกมการศึกษาแบบอินเทอร์แอคทีฟ 2D ชื่อเกม “${name}” สำหรับนักเรียนชั้น ${tg} ให้เล่นได้จริงครบทุกหน้าจอ`);
+
+  let n=0;const S=t=>{H(`${++n}. ${t} :`)};
+  S('เป้าหมายการเรียนรู้');
+  if(v('subject')) o.push(`- วิชา: ${v('subject')}`);
+  if(v('topic')) o.push(`- เรื่อง: ${v('topic')}`);
+  if(v('goal')) o.push(`- ระดับการเรียนรู้: ${v('goal')}`);
+  if(v('practice')) o.push(`- นักเรียนได้ฝึก: ${v('practice')}`);
+  if(o[o.length-1].endsWith(':')) o.push('- ให้เนื้อหาเหมาะกับระดับชั้นของผู้เล่น');
+
+  S('แนวคิดและเรื่องราวของเกม');
+  if(v('g_theme')) o.push(`- ธีม: ${v('g_theme')}`);
+  if(v('g_role')) o.push(`- ผู้เล่นรับบทเป็น: ${v('g_role')}`);
+  if(v('g_mission')) o.push(`- ภารกิจหลัก: ${v('g_mission')}`);
+  if(v('f_concept')&&full) o.push(`- แนวคิดโดยย่อ: ${v('f_concept')}`);
+
+  S('หน้าหลัก (ก่อนเริ่มเกม)');
+  o.push(`- แสดงชื่อเกม “${name}” ตัวใหญ่ พร้อมภาพตัวละครและฉากตามธีม`);
+  o.push('- มีปุ่ม “เริ่มเกม” และคำอธิบายวิธีเล่นสั้น ๆ 2–3 บรรทัด');
+  if(v('q_level')==='ง่ายไปยาก'||gl.some(g=>g.k==='levels')) o.push('- ความยากเพิ่มขึ้นตามลำดับข้อ/ด่าน');
+  if(gl.some(g=>g.k==='leaderboard')) o.push('- มีช่องให้ผู้เล่นพิมพ์ชื่อก่อนเริ่มเกม');
+
+  S('รูปแบบการเล่น');
+  lines(v('p_how')).forEach(l=>o.push(`- ${l}`));
+  if(v('p_do')) o.push(`- สิ่งที่ผู้เล่นต้องทำ: ${v('p_do')}`);
+  if(v('p_interact')) o.push(`- วิธีโต้ตอบ: ${v('p_interact')}`);
+  if(has('p_interact','ควบคุมตัวละคร')) o.push('- ควบคุมด้วยปุ่มลูกศรบนคีย์บอร์ด และมีปุ่มลูกศรบนจอสำหรับแท็บเล็ต');
+  if(has('p_interact','ลาก')) o.push('- การลากวางต้องใช้ได้ทั้งเมาส์และการแตะหน้าจอ');
+
+  S('โจทย์และความท้าทาย');
+  if(v('q_type')) o.push(`- รูปแบบโจทย์: ${v('q_type')}`);
+  if(v('q_count')) o.push(`- จำนวน: ${v('q_count')}`);
+  if(v('q_level')) o.push(`- ระดับความยาก: ${v('q_level')}`);
+  const ex=lines(v('q_example'));
+  if(ex.length){o.push('- ตัวอย่างโจทย์ (ให้สร้างข้อที่เหลือในแบบเดียวกัน):');ex.forEach(l=>o.push(`  ${l}`))}
+  if(has('q_extra','สุ่ม')||has('q_type','สุ่ม')) o.push('- สุ่มลำดับคำถามและตำแหน่งคำตอบใหม่ทุกครั้งที่เล่น ไม่ให้คำถามซ้ำในรอบเดียวกัน');
+  if(has('q_extra','หลอก')) o.push('- ตัวเลือกหลอกต้องใกล้เคียงคำตอบจริง แต่ผิดอย่างชัดเจน');
+  if(timer) o.push('- มีการจับเวลา (ดูรายละเอียดในข้อ Gamification)');
+  if(hint) o.push('- มีปุ่ม “คำใบ้” ที่ช่วยให้คิดได้โดยไม่บอกคำตอบตรง ๆ');
+  o.push('- เนื้อหาและคำตอบที่ถูกต้องต้องถูกต้องตามหลักวิชาทุกข้อ');
+
+  S('ระบบจูงใจ (Gamification)');
+  if(gl.length) gl.forEach(g=>o.push(`- ${g.spec}`)); else o.push('- มีระบบคะแนนแสดงที่มุมบนของจอ');
+  if(full&&(v('gm_because')||v('gm_more')||v('why'))){
+    const why=[v('gm_because'),v('gm_more'),v('why')&&('เด็กจะอยากเล่นต่อเพราะ'+v('why'))].filter(Boolean).join(' / ');
+    o.push(`- เป้าหมายของระบบนี้: ${why}`);
+  }
+
+  S('ผลลัพธ์ในเกม');
+  o.push(`- เมื่อตอบถูก: ${v('r_right')||'ได้คะแนน'} พร้อมข้อความชม เช่น “เยี่ยมมาก!” หน้าจอกะพริบสีเขียวสั้น ๆ แล้วไปต่อทันที`);
+  o.push(`- เมื่อตอบผิด: ${v('r_wrong')||'ให้ลองใหม่'} พร้อมข้อความให้กำลังใจ เช่น “ยังไม่ใช่นะ ลองใหม่อีกครั้ง” หน้าจอสั่นและเป็นสีแดงสั้น ๆ (ไม่ใช้คำตำหนิ)`);
+  o.push(`- เงื่อนไขชนะ: ${v('r_win')||'ตอบครบทุกข้อ'} → แสดงหน้าต่าง “ยินดีด้วย! คุณทำสำเร็จแล้ว” พร้อมพลุ และสรุปคะแนน`);
+  if(v('r_lose')||lives||timer) o.push(`- เงื่อนไขแพ้: ${v('r_lose')||[lives&&'หัวใจหมด',timer&&'หมดเวลา'].filter(Boolean).join(' หรือ ')} → แสดงหน้าต่าง “เกือบแล้ว! ลองอีกครั้งนะ” พร้อมสรุปคะแนน`);
+  o.push('- หน้าสรุปผลแสดงข้อความตามช่วงคะแนน: ได้ 80% ขึ้นไป “เก่งมาก! สุดยอดไปเลย” / 50–79% “ดีมาก พัฒนาต่อไปนะ” / ต่ำกว่า 50% “ไม่เป็นไร ลองใหม่อีกครั้งนะ”');
+  o.push('- ทุกหน้าสรุปมีปุ่ม “เล่นอีกครั้ง” ที่เริ่มเกมใหม่ได้ทันที');
+
+  S('งานภาพและ UI');
+  if(v('l_style')) o.push(`- สไตล์ภาพ: ${v('l_style')}`);
+  if(v('l_color')) o.push(`- โทนสี: ${v('l_color')}`);
+  if(v('l_char')) o.push(`- ตัวละคร / ฉาก: ${v('l_char')} ให้เข้ากับธีม${v('g_theme')?' '+v('g_theme'):''}`);
+  if(v('l_ui')) o.push(`- องค์ประกอบ UI: ${v('l_ui')}`);
+  o.push('- จัดหน้าจอ: แถบสถานะ (คะแนน / หัวใจ / เวลา) อยู่ด้านบน โจทย์อยู่กลางจอตัวใหญ่ ตัวเลือกคำตอบอยู่ด้านล่าง');
+  o.push('- ตัวอักษรใหญ่ อ่านง่าย ปุ่มใหญ่กดง่าย มีเอฟเฟกต์เมื่อกด');
+
+  S('ข้อกำหนดเพิ่มเติม');
+  if(lang==='อังกฤษ (คำสั่งภาษาไทย)') o.push('- เนื้อหาโจทย์และคำตอบเป็นภาษาอังกฤษ ส่วนคำสั่ง ปุ่ม และข้อความแจ้งผลเป็นภาษาไทย');
+  else if(lang) o.push(`- ข้อความทั้งหมดในเกมใช้ภาษา${lang}`);
+  else o.push('- ข้อความในเกมใช้ภาษาไทยที่อ่านง่าย เหมาะกับวัย');
+  o.push('- เล่นได้บนคอมพิวเตอร์และแท็บเล็ต รองรับทั้งเมาส์และการแตะหน้าจอ');
+  if(full){
+    o.push('- มีเสียงเอฟเฟกต์เบา ๆ เมื่อตอบถูกและตอบผิด และมีปุ่มเปิด/ปิดเสียง');
+    o.push('- ภาพ คำ และเนื้อหาต้องเหมาะกับวัยเด็ก ไม่น่ากลัวหรือรุนแรงเกินไป');
+    H('[ตรวจสอบก่อนส่งงาน]');
+    o.push('- เกมเริ่มได้จากหน้าหลัก และทุกปุ่มทำงานจริง');
+    o.push('- คะแนน หัวใจ เวลา และแถบความก้าวหน้า อัปเดตถูกต้องทุกครั้ง');
+    o.push('- คำตอบที่ถูกต้องของทุกข้อถูกต้องจริง และตรวจคำตอบได้แม่นยำ');
+    o.push('- เงื่อนไขชนะ/แพ้ทำงาน และปุ่ม “เล่นอีกครั้ง” รีเซ็ตเกมได้สมบูรณ์');
+  }
+  return o.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+function renderPrompt(){const t=buildPrompt(pmode);$('#promptOut').value=t;meta();}
+function meta(){const t=$('#promptOut').value;$('#pMeta').textContent=`${t.length.toLocaleString()} ตัวอักษร · ${t.split('\n').length} บรรทัด`;}
+
+/* ---------- views ---------- */
+function go(to){
+  view=to;['form','card','prompt'].forEach(x=>$('#v-'+x).hidden=x!==to);
+  document.querySelectorAll('.step').forEach(b=>{if(b.dataset.go===to)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current')});
+  if(to==='card'){if(!v('f_concept')&&!v('f_outcome'))autoSummary(true);renderCard();}
+  if(to==='prompt')renderPrompt();
+  window.scrollTo({top:0,behavior:'smooth'});
+  try{localStorage.setItem(KEY+'-view',to)}catch(e){}
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b){e.preventDefault();go(b.dataset.go)}});
+$('#toCard').addEventListener('click',()=>go('card'));
+window.addEventListener('resize',scaleCard);
+
+/* clear / example */
+function armClear(btn){
+  if(btn.dataset.armed){data={gamify:[]};isExample=false;fillForm();save();btn.textContent='ล้างฟอร์ม';delete btn.dataset.armed;toast('ล้างฟอร์มแล้ว');return}
+  btn.dataset.armed='1';btn.textContent='กดอีกครั้งเพื่อยืนยัน';setTimeout(()=>{if(btn.dataset.armed){delete btn.dataset.armed;btn.textContent='ล้างฟอร์ม'}},3000);
+}
+$('#clearBtn').addEventListener('click',e=>armClear(e.currentTarget));
+$('#clearBtn2').addEventListener('click',e=>armClear(e.currentTarget));
+$('#exampleSel').innerHTML+=EXAMPLES.map((e,i)=>`<option value="${i}">${esc(e.label)}</option>`).join('');
+$('#exampleSel').addEventListener('change',e=>{const i=e.target.value;e.target.value='';if(i==='')return;
+  const ex=JSON.parse(JSON.stringify(EXAMPLES[+i]));delete ex.label;data=ex;isExample=true;autoSummary(true);fillForm();save();toast('ใส่ตัวอย่าง: '+EXAMPLES[+i].label)});
+
+/* prompt controls */
+$('#mFull').addEventListener('click',()=>{pmode='full';$('#mFull').setAttribute('aria-pressed','true');$('#mShort').setAttribute('aria-pressed','false');renderPrompt()});
+$('#mShort').addEventListener('click',()=>{pmode='short';$('#mShort').setAttribute('aria-pressed','true');$('#mFull').setAttribute('aria-pressed','false');renderPrompt()});
+$('#regen').addEventListener('click',()=>{renderPrompt();toast('สร้าง prompt ใหม่จากการ์ดแล้ว')});
+$('#promptOut').addEventListener('input',meta);
+$('#copyBtn').addEventListener('click',()=>{
+  const ta=$('#promptOut');const fb=()=>{ta.focus();ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}toast(ok?'คัดลอกแล้ว นำไปวางใน Canva AI ได้เลย':'เลือกข้อความให้แล้ว กด Ctrl+C (หรือ ⌘+C) เพื่อคัดลอก')};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(ta.value).then(()=>toast('คัดลอกแล้ว นำไปวางใน Canva AI ได้เลย'),fb)}else fb();
+});
+
+/* image export */
+let lastBlob=null;
+$('#imgBtn').addEventListener('click',async()=>{
+  const m=$('#imgModal'),img=$('#imgOut'),st=$('#imgStatus');m.hidden=false;img.hidden=true;st.textContent='กำลังสร้างรูปภาพ…';lastBlob=null;
+  try{
+    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    const off=$('#offscreen');off.innerHTML='';const c=document.createElement('div');c.className='gc';c.innerHTML=buildCard();off.appendChild(c);fitCard(c);
+    const canvas=await html2canvas(c,{scale:2,backgroundColor:'#FBFCFF',logging:false,useCORS:true});
+    off.innerHTML='';
+    img.src=canvas.toDataURL('image/png');img.hidden=false;
+    canvas.toBlob(b=>lastBlob=b,'image/png');
+    st.textContent='คลิกขวาที่รูปแล้วเลือก “บันทึกรูปภาพเป็น…” (บนแท็บเล็ต/มือถือ ให้แตะค้างที่รูป) · ขนาด 2246 × 1588 px สัดส่วน A4 แนวนอน';
+  }catch(err){st.textContent='สร้างรูปภาพไม่สำเร็จ ลองกดใหม่อีกครั้ง หรือแคปหน้าจอการ์ดแทน';}
+});
+$('#closeModal').addEventListener('click',()=>$('#imgModal').hidden=true);
+$('#imgModal').addEventListener('click',e=>{if(e.target.id==='imgModal')$('#imgModal').hidden=true});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#imgModal').hidden=true});
+$('#copyImg').addEventListener('click',async()=>{
+  try{if(!lastBlob||!window.ClipboardItem)throw 0;await navigator.clipboard.write([new ClipboardItem({'image/png':lastBlob})]);toast('คัดลอกรูปแล้ว วางใน Canva หรือเอกสารได้เลย')}
+  catch(e){toast('เบราว์เซอร์นี้คัดลอกรูปไม่ได้ ให้คลิกขวาที่รูปแล้วบันทึกแทน')}
+});
+
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2600)}
+
+/* boot */
+renderForm();
+if(!load()){data=JSON.parse(JSON.stringify(EXAMPLE));delete data.label;isExample=true;autoSummary(true);}
+fillForm();
+let startView='form';try{startView=localStorage.getItem(KEY+'-view')||'form'}catch(e){}
+go(['form','card','prompt'].includes(startView)?startView:'form');
+window.scrollTo(0,0);
+})();
+</script>
